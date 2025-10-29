@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Agências Zeradas por % de Atingimento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.20.1/xlsx.full.min.js"></script>
+
+<style>
+  :root{
+    --bb-blue:#003399; --bb-yellow:#FFCC00;
+    --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+    --bg1:#f6f8ff; --bg2:#ffffff; --accent:#1e3a8a;
+    --ok:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+    --radius-xl:24px; --radius:16px; --shadow-lg:0 18px 50px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:28px;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color:var(--ink);
+    background: radial-gradient(1200px 600px at 10% -10%, #eaf0ff 0%, transparent 60%) ,
+                radial-gradient(900px 500px at 110% 10%, #f3f8ff 0%, transparent 60%) ,
+                linear-gradient(180deg, #fafcff 0%, #f8fafc 100%);
+  }
+  .wrap{max-width:1200px; margin:0 auto}
+  header{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px;
+  }
+  h1{font-size:28px; margin:0; letter-spacing:.2px}
+  .sub{color:var(--muted)}
+  .card{
+    background:var(--bg2); border:1px solid var(--line);
+    border-radius:var(--radius-xl); box-shadow:var(--shadow-lg);
+    padding:22px; margin:18px 0;
+  }
+  .row{display:grid; gap:14px}
+  @media(min-width:860px){ .row.cols-2{grid-template-columns:1fr 1fr} }
+  label{font-weight:700; font-size:14px; display:block; margin-bottom:8px}
+  select, input[type="file"], button{
+    width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:14px; background:#fff; font-size:14px;
+  }
+  .hint{font-size:12.5px; color:var(--muted); margin-top:6px}
+  .btn{
+    background:var(--bb-blue); color:#fff; font-weight:800; border:none; cursor:pointer; padding:12px 16px; border-radius:12px;
+    transition:transform .06s ease, box-shadow .1s ease;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn.ghost{background:#fff; color:var(--bb-blue); border:1px solid var(--bb-blue)}
+  .btn.warn{background:var(--bad)}
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap}
+  .kpi{
+    display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;
+  }
+  .pill{
+    background:#eef2ff; border:1px solid #dfe6ff; color:#0b1a66;
+    padding:8px 12px; border-radius:999px; font-weight:700; font-size:13px;
+  }
+  .switch{display:flex; align-items:center; gap:10px; margin-top:6px; color:var(--muted); font-size:13.5px}
+  table{
+    width:100%; border-collapse:separate; border-spacing:0; margin-top:12px; border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  }
+  thead th{
+    background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%); font-size:13px; text-transform:uppercase; letter-spacing:.4px;
+  }
+  th, td{padding:11px 12px; border-bottom:1px solid var(--line); text-align:left; font-size:14px}
+  tbody tr:hover{background:#f8fbff}
+  .section-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;
+  }
+  .title{
+    font-weight:900; font-size:16px; display:flex; align-items:center; gap:10px;
+  }
+  .badge{background:var(--bb-yellow); color:#111; padding:4px 10px; border-radius:999px; font-weight:900; font-size:12px}
+  .empty{
+    color:var(--muted); font-style:italic; padding:12px 0 2px;
+  }
+  .grid-list{display:grid; gap:18px}
+  .grid-list.cols-2{grid-template-columns:1fr}
+  @media(min-width:980px){ .grid-list.cols-2{grid-template-columns:1fr 1fr} }
+  .footer-note{color:var(--muted); font-size:12px; margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Agências com <span style="color:var(--bb-blue)">% de Atingimento</span> Zerado</h1>
+      <div class="sub">Para cada coluna com “%” e “Atingimento”, listamos abaixo as agências cujo valor é <b>0</b>.</div>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="row cols-2">
+      <div>
+        <label>Planilha (CSV ou XLSX)</label>
+        <input id="file" type="file" accept=".xlsx,.xls,.csv"/>
+        <div class="hint">Suporta formatos BR (ex.: <code>0%</code>, <code>0,00%</code>, <code>R$ 0,00</code>).</div>
+      </div>
+      <div>
+        <label>Opções</label>
+        <div class="switch">
+          <input id="emptyAsZero" type="checkbox" checked/>
+          <span>Tratar células vazias como zero</span>
+        </div>
+        <div class="hint">Desmarque se quiser considerar somente <b>zero explícito</b> (0 / 0% / 0,00%).</div>
+      </div>
+    </div>
+
+    <div class="row cols-2" style="margin-top:14px">
+      <div>
+        <label>Coluna: Prefixo</label>
+        <select id="colPrefixo" disabled></select>
+      </div>
+      <div>
+        <label>Coluna: Agência</label>
+        <select id="colAgencia" disabled></select>
+      </div>
+    </div>
+
+    <div style="margin-top:14px" class="toolbar">
+      <button id="analisar" class="btn" disabled>Gerar listas por item</button>
+      <button id="baixarTudo" class="btn ghost" disabled>Baixar todos os CSVs</button>
+    </div>
+
+    <div class="kpi" id="resumo"></div>
+  </section>
+
+  <section id="saida" class="grid-list cols-2"></section>
+
+  <div class="footer-note">Dica: se algum item não aparecer, confira se o nome da coluna contém <b>%</b> e <b>Atingimento</b>.</div>
+</div>
+
+<script>
+  const $ = s => document.querySelector(s);
+
+  let rows = [];
+  let headers = [];
+  let prefixCol = null, agenciaCol = null;
+  let itemCols = []; // colunas de "% de Atingimento"
+  let cache = {};    // { itemCol: [{Prefixo, Agência}] }
+
+  function cleanHeader(h){ return String(h||'').trim(); }
+
+  function guess(hdrs, keys){
+    const lc = hdrs.map(h => [h, h.toLowerCase()]);
+    for(const k of keys){
+      const hit = lc.find(([orig,low]) => low.includes(k));
+      if(hit) return hit[0];
+    }
+    return hdrs[0] || '';
+  }
+
+  function isPctAtingHeader(h){
+    const s = h.toLowerCase();
+    return s.includes('%') && s.includes('atingimento');
+  }
+
+  function toNumberBR(v){
+    if(v===null || v===undefined) return null;
+    if(typeof v==='number') return v;
+    let s = String(v).trim();
+    if(s==='') return null;
+    // Trata percentuais “xx,yy%”, “xx%”
+    s = s.replace(/\s+/g,'').replace(/%/g,'');
+    // Remove R$ se houver
+    s = s.replace(/R\$/gi,'');
+    // Se padrão milhar + vírgula decimal
+    if(s.match(/\d\.\d{3}/) && s.includes(',')){
+      s = s.replace(/\./g,'').replace(',','.');
+    } else if(s.includes(',')){
+      s = s.replace(',','.');
+    }
+    s = s.replace(/[^0-9\.\-]/g,'');
+    if(s===''||s==='-'||s==='.') return null;
+    const n = Number(s);
+    return Number.isFinite(n)? n : null;
+  }
+
+  function uniqByPrefixAgencia(items, colP, colA){
+    const m = new Map();
+    for(const r of items){
+      const p = (r[colP]??'').toString().trim();
+      const a = (r[colA]??'').toString().trim();
+      if(!p && !a) continue;
+      m.set(`${p}||${a}`, r);
+    }
+    return Array.from(m.values());
+  }
+
+  function renderResumo(){
+    const totalAgs = new Set(rows.map(r => `${(r[prefixCol]??'').toString().trim()}||${(r[agenciaCol]??'').toString().trim()}`)).size;
+    const el = $('#resumo');
+    el.innerHTML = `
+      <span class="pill">Agências únicas: <b>${totalAgs}</b></span>
+      <span class="pill">Itens (% Atingimento): <b>${itemCols.length}</b></span>
+    `;
+  }
+
+  function makeTableFor(itemCol){
+    const colP = prefixCol, colA = agenciaCol;
+    const emptyAsZero = $('#emptyAsZero').checked;
+
+    const uniq = uniqByPrefixAgencia(rows, colP, colA);
+    const zeradas = [];
+    for(const r of uniq){
+      const raw = r[itemCol];
+      const n = toNumberBR(raw);
+      const isEmpty = raw===null || raw===undefined || String(raw).trim()==='';
+      const isZero = (n===0) || (emptyAsZero && (isEmpty || n===null));
+      if(isZero){
+        zeradas.push({[colP]: r[colP], [colA]: r[colA]});
+      }
+    }
+    zeradas.sort((x,y)=>{
+      const a = `${x[colP]??''}${x[colA]??''}`;
+      const b = `${y[colP]??''}${y[colA]??''}`;
+      return a.localeCompare(b, 'pt-BR', {numeric:true, sensitivity:'base'});
+    });
+    cache[itemCol] = zeradas;
+
+    // bloco visual
+    const section = document.createElement('div');
+    section.className='card';
+
+    const head = document.createElement('div');
+    head.className='section-head';
+    head.innerHTML = `
+      <div class="title">
+        <span>Item:</span>
+        <span style="color:var(--accent)">${itemCol}</span>
+        <span class="badge">${zeradas.length}</span>
+      </div>
+      <div class="toolbar">
+        <button class="btn ghost" onclick="downloadCSV('${sanitizeName(itemCol)}.csv', ${JSON.stringify(JSON.stringify(toCSV(zeradas,[colP,colA])))} )">Baixar CSV</button>
+      </div>
+    `;
+    section.appendChild(head);
+
+    if(zeradas.length===0){
+      const p = document.createElement('div');
+      p.className='empty'; p.textContent='Nenhuma agência com 0% neste item.';
+      section.appendChild(p);
+    }else{
+      const tbl = document.createElement('table');
+      tbl.innerHTML = `
+        <thead><tr><th>${colP}</th><th>${colA}</th></tr></thead>
+        <tbody>
+          ${zeradas.map(o=>`<tr><td>${o[colP]??''}</td><td>${o[colA]??''}</td></tr>`).join('')}
+        </tbody>
+      `;
+      section.appendChild(tbl);
+    }
+    return section;
+  }
+
+  function sanitizeName(s){ return s.replace(/[^\w\-]+/g,'_'); }
+
+  function toCSV(rows, cols){
+    const esc = s => `"${String(s??'').replace(/"/g,'""')}"`;
+    const out = [];
+    out.push(cols.map(esc).join(','));
+    for(const r of rows) out.push(cols.map(c=>esc(r[c])).join(','));
+    return out.join('\n');
+  }
+
+  function downloadCSV(name, contentJsonStr){
+    // contentJsonStr chega como string JSON para preservar quebras
+    const content = JSON.parse(contentJsonStr);
+    const blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=name; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadAllCSVs(){
+    // Sem lib de zip para simplicidade: salva um .txt com vários CSVs concatenados e separador claro.
+    const colP = prefixCol, colA = agenciaCol;
+    const parts = [];
+    for(const item of itemCols){
+      const csv = toCSV(cache[item]||[], [colP,colA]);
+      parts.push(`===== ${item} =====\n${csv}\n`);
+    }
+    const blob = new Blob([parts.join('\n')], {type:'text/plain;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='todos_os_csvs.txt'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ====== Eventos ======
+  $('#file').addEventListener('change', async (e)=>{
+    const f = e.target.files?.[0]; if(!f) return;
+    const isCSV = /\.csv$/i.test(f.name);
+    const data = await f.arrayBuffer();
+
+    try{
+      let wb, ws, arr;
+      wb = XLSX.read(data, {type:'array', raw:false});
+      ws = wb.Sheets[wb.SheetNames[0]];
+      arr = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
+      if(!arr.length) throw new Error('Planilha sem dados');
+
+      rows = arr;
+      headers = Object.keys(rows[0]||{}).map(cleanHeader);
+
+      prefixCol = guess(headers, ['prefixo','pref','prefix']);
+      agenciaCol = guess(headers, ['agência','agencia','unidade','ag']);
+
+      // colunas de % Atingimento
+      itemCols = headers.filter(isPctAtingHeader);
+
+      // Preencher selects
+      fillSelect($('#colPrefixo'), headers, 'Selecione a coluna de Prefixo', prefixCol);
+      fillSelect($('#colAgencia'), headers, 'Selecione a coluna de Agência', agenciaCol);
+
+      $('#colPrefixo').disabled = false;
+      $('#colAgencia').disabled = false;
+      $('#analisar').disabled = itemCols.length===0;
+      $('#baixarTudo').disabled = true;
+
+      renderResumo();
+
+      if(itemCols.length===0){
+        alert('Não encontramos colunas com “%” e “Atingimento”. Selecione manualmente Prefixo e Agência e ajuste sua planilha.');
+      }
+    }catch(err){
+      alert('Erro ao ler a planilha: '+ err.message);
+      console.error(err);
+    }
+  });
+
+  $('#colPrefixo').addEventListener('change', (e)=>{ prefixCol = e.target.value; renderResumo(); });
+  $('#colAgencia').addEventListener('change', (e)=>{ agenciaCol = e.target.value; renderResumo(); });
+
+  $('#analisar').addEventListener('click', ()=>{
+    if(!prefixCol || !agenciaCol){ alert('Selecione Prefixo e Agência.'); return; }
+    if(itemCols.length===0){ alert('Não há colunas de % de Atingimento detectadas.'); return; }
+
+    $('#saida').innerHTML = '';
+    cache = {};
+    for(const item of itemCols){
+      const section = makeTableFor(item);
+      $('#saida').appendChild(section);
+    }
+    $('#baixarTudo').disabled = false;
+  });
+
+  $('#baixarTudo').addEventListener('click', downloadAllCSVs);
+
+  function fillSelect(sel, options, placeholder, selected){
+    sel.innerHTML = '';
+    const ph = document.createElement('option'); ph.value=''; ph.textContent=placeholder; sel.appendChild(ph);
+    for(const o of options){
+      const op = document.createElement('option'); op.value=o; op.textContent=o;
+      sel.appendChild(op);
+    }
+    if(selected && options.includes(selected)) sel.value = selected;
+  }
+</script>
+</body>
+</html>
