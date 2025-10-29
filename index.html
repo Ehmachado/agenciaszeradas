@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador de Agências Zeradas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f0f5;
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-label {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .upload-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .config-section {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .config-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .config-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-group label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .config-group select,
+        .config-group input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .config-group select:focus,
+        .config-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .product-config {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .product-header h4 {
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .remove-product {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .remove-product:hover {
+            background: #cc0000;
+        }
+
+        .add-product-btn,
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        .add-product-btn:hover,
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .add-product-btn {
+            background: #28a745;
+        }
+
+        .add-product-btn:hover {
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-card h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .summary-card .number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .result-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .result-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .agency-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .agency-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .agency-item .prefix {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .agency-item .name {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .all-zeros {
+            border-left-color: #ff4444;
+        }
+
+        .all-zeros .prefix {
+            color: #ff4444;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .icon {
+            font-size: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .config-row {
+                grid-template-columns: 1fr;
+            }
+
+            .agency-list {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Analisador de Agências Zeradas</h1>
+            <p>Identifique agências com realização zero em produtos específicos ou em todos os produtos</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-section">
+                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+                <label for="fileInput" class="upload-label">
+                    📁 Selecionar Planilha (CSV ou Excel)
+                </label>
+                <p style="margin-top: 15px; color: #666;">Formatos aceitos: CSV, XLS, XLSX</p>
+            </div>
+
+            <div class="config-section" id="configSection">
+                <h3>⚙️ Configuração dos Dados</h3>
+                
+                <div class="config-row">
+                    <div class="config-group">
+                        <label>Coluna do Prefixo:</label>
+                        <select id="prefixColumn"></select>
+                    </div>
+                    <div class="config-group">
+                        <label>Coluna do Nome da Agência:</label>
+                        <select id="agencyColumn"></select>
+                    </div>
+                </div>
+
+                <h4 style="margin: 25px 0 15px 0; color: #555;">Produtos (até 5):</h4>
+                <div id="productsContainer"></div>
+
+                <button class="add-product-btn" id="addProductBtn" onclick="addProduct()">
+                    ➕ Adicionar Produto
+                </button>
+
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="analyze-btn" onclick="analyzeData()">
+                        🔎 Analisar Dados
+                    </button>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <div class="summary-cards" id="summaryCards"></div>
+                <div id="resultsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        let data = [];
+        let headers = [];
+        let productCount = 0;
+
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            
+            if (file.name.endsWith('.csv')) {
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    parseCSV(text);
+                };
+                reader.readAsText(file);
+            } else {
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const csv = XLSX.utils.sheet_to_csv(firstSheet);
+                    parseCSV(csv);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const delimiter = text.includes(';') ? ';' : ',';
+            
+            headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+            data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                data.push(row);
+            }
+
+            setupConfiguration();
+        }
+
+        function setupConfiguration() {
+            const prefixSelect = document.getElementById('prefixColumn');
+            const agencySelect = document.getElementById('agencyColumn');
+
+            prefixSelect.innerHTML = '<option value="">Selecione...</option>';
+            agencySelect.innerHTML = '<option value="">Selecione...</option>';
+
+            headers.forEach(header => {
+                prefixSelect.innerHTML += `<option value="${header}">${header}</option>`;
+                agencySelect.innerHTML += `<option value="${header}">${header}</option>`;
+            });
+
+            // Auto-select if columns match common names
+            const prefixOptions = ['Prefixo', 'prefixo', 'PREFIXO', 'Prefix', 'ID'];
+            const agencyOptions = ['Agência', 'Agencia', 'agência', 'agencia', 'AGENCIA', 'Nome', 'Name'];
+
+            prefixOptions.forEach(opt => {
+                if (headers.includes(opt)) prefixSelect.value = opt;
+            });
+
+            agencyOptions.forEach(opt => {
+                if (headers.includes(opt)) agencySelect.value = opt;
+            });
+
+            document.getElementById('configSection').style.display = 'block';
+            document.getElementById('productsContainer').innerHTML = '';
+            productCount = 0;
+            
+            // Add first product automatically
+            addProduct();
+        }
+
+        function addProduct() {
+            if (productCount >= 5) {
+                alert('Máximo de 5 produtos permitidos');
+                return;
+            }
+
+            productCount++;
+            const container = document.getElementById('productsContainer');
+            const productDiv = document.createElement('div');
+            productDiv.className = 'product-config';
+            productDiv.id = `product-${productCount}`;
+
+            productDiv.innerHTML = `
+                <div class="product-header">
+                    <h4>Produto ${productCount}</h4>
+                    <button class="remove-product" onclick="removeProduct(${productCount})">Remover</button>
+                </div>
+                <div class="config-row">
+                    <div class="config-group">
+                        <label>Nome do Produto:</label>
+                        <input type="text" id="productName-${productCount}" placeholder="Ex: Vida, Prestamista...">
+                    </div>
+                    <div class="config-group">
+                        <label>Coluna de Realização:</label>
+                        <select id="productColumn-${productCount}">
+                            <option value="">Selecione...</option>
+                            ${headers.map(h => `<option value="${h}">${h}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(productDiv);
+
+            // Auto-detect and fill common product names
+            autoDetectProduct(productCount);
+        }
+
+        function autoDetectProduct(index) {
+            const productPatterns = [
+                { name: 'Vida', pattern: /Realizado.*Vida/i },
+                { name: 'Prestamista', pattern: /Realizado.*Prestamista/i },
+                { name: 'Capitalização', pattern: /Realizado.*Capital/i },
+                { name: 'Consórcio', pattern: /Realizado.*Cons[óo]rcio/i }
+            ];
+
+            for (let pattern of productPatterns) {
+                const matchingHeader = headers.find(h => pattern.pattern.test(h));
+                if (matchingHeader) {
+                    const alreadyUsed = Array.from(document.querySelectorAll('[id^="productColumn-"]'))
+                        .some(select => select.value === matchingHeader && select.id !== `productColumn-${index}`);
+                    
+                    if (!alreadyUsed) {
+                        document.getElementById(`productName-${index}`).value = pattern.name;
+                        document.getElementById(`productColumn-${index}`).value = matchingHeader;
+                        break;
+                    }
+                }
+            }
+        }
+
+        function removeProduct(id) {
+            const element = document.getElementById(`product-${id}`);
+            if (element) {
+                element.remove();
+                productCount--;
+            }
+        }
+
+        function analyzeData() {
+            const prefixColumn = document.getElementById('prefixColumn').value;
+            const agencyColumn = document.getElementById('agencyColumn').value;
+
+            if (!prefixColumn || !agencyColumn) {
+                alert('Por favor, selecione as colunas de Prefixo e Agência');
+                return;
+            }
+
+            const products = [];
+            for (let i = 1; i <= 5; i++) {
+                const nameInput = document.getElementById(`productName-${i}`);
+                const columnSelect = document.getElementById(`productColumn-${i}`);
+                
+                if (nameInput && columnSelect && nameInput.value && columnSelect.value) {
+                    products.push({
+                        name: nameInput.value,
+                        column: columnSelect.value
+                    });
+                }
+            }
+
+            if (products.length === 0) {
+                alert('Por favor, configure pelo menos um produto');
+                return;
+            }
+
+            performAnalysis(prefixColumn, agencyColumn, products);
+        }
+
+        function performAnalysis(prefixColumn, agencyColumn, products) {
+            const results = {
+                byProduct: {},
+                allZeros: [],
+                total: data.length
+            };
+
+            products.forEach(product => {
+                results.byProduct[product.name] = [];
+            });
+
+            data.forEach(row => {
+                const prefix = row[prefixColumn];
+                const agency = row[agencyColumn];
+                
+                if (!prefix || !agency) return;
+
+                let allProductsZero = true;
+
+                products.forEach(product => {
+                    const value = parseValue(row[product.column]);
+                    
+                    if (value === 0) {
+                        results.byProduct[product.name].push({
+                            prefix,
+                            agency
+                        });
+                    } else {
+                        allProductsZero = false;
+                    }
+                });
+
+                if (allProductsZero) {
+                    results.allZeros.push({
+                        prefix,
+                        agency
+                    });
+                }
+            });
+
+            displayResults(results, products);
+        }
+
+        function parseValue(str) {
+            if (!str) return 0;
+            const cleaned = str.toString().replace(/[^\d.,]/g, '').replace(',', '.');
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function displayResults(results, products) {
+            const summaryCards = document.getElementById('summaryCards');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            summaryCards.innerHTML = '';
+            resultsContainer.innerHTML = '';
+
+            // Summary cards
+            summaryCards.innerHTML = `
+                <div class="summary-card">
+                    <h3>Total de Agências</h3>
+                    <div class="number">${results.total}</div>
+                </div>
+                <div class="summary-card" style="background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);">
+                    <h3>Zeradas em Tudo</h3>
+                    <div class="number">${results.allZeros.length}</div>
+                </div>
+            `;
+
+            // All zeros section
+            if (results.allZeros.length > 0) {
+                resultsContainer.innerHTML += `
+                    <div class="result-section">
+                        <h3>
+                            <span class="icon">🚫</span>
+                            Agências Zeradas em TODOS os Produtos
+                            <span class="badge">${results.allZeros.length}</span>
+                        </h3>
+                        <div class="agency-list">
+                            ${results.allZeros.map(agency => `
+                                <div class="agency-item all-zeros">
+                                    <div class="prefix">${agency.prefix}</div>
+                                    <div class="name">${agency.agency}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // By product sections
+            products.forEach(product => {
+                const agencies = results.byProduct[product.name];
+                if (agencies.length > 0) {
+                    resultsContainer.innerHTML += `
+                        <div class="result-section">
+                            <h3>
+                                <span class="icon">📊</span>
+                                Agências Zeradas em: ${product.name}
+                                <span class="badge">${agencies.length}</span>
+                            </h3>
+                            <div class="agency-list">
+                                ${agencies.map(agency => `
+                                    <div class="agency-item">
+                                        <div class="prefix">${agency.prefix}</div>
+                                        <div class="name">${agency.agency}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (resultsContainer.innerHTML === '' && results.allZeros.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">✅ Nenhuma agência zerada encontrada!</div>';
+            }
+
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
